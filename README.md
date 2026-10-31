@@ -17,7 +17,7 @@ checks), never a password.
 
 `/srv/build/android-pos`: the project in `src/`, its own Gradle home, the SDK and JDK 25 of `/srv/build/android`
 (read only). Two flavors, the same package and signer: `github` (the download page; updates itself from this
-repository's Releases, #1) and `play` (Google Play, which forbids an app updating itself). `:app:assembleGithubDebug`,
+repository's Releases, #1) and `play` (kept for a later Google Play listing, which forbids an app updating itself). `:app:assembleGithubDebug`,
 `:app:testGithubDebugUnitTest` (Robolectric draws the screens into `/srv/build/android-pos/screens`, or
 `SCREENS_DIR`), `:app:assembleGithubRelease` / `:app:bundlePlayRelease` with the release key in
 `/srv/build/android-pos/keys/signing.properties`.
@@ -25,8 +25,3 @@ repository's Releases, #1) and `play` (Google Play, which forbids an app updatin
 Not in the repository: the release key, and `app/google-services.json` (the Firebase project of
 hello@radianceph.com, copied in from the keys folder at build time). Your own build needs your own Firebase project's
 `google-services.json` for `com.radianceph.pos` and `com.radianceph.pos.debug` (docs/FIREBASE.md).
-
-## Licence
-
-GNU Affero General Public License v3.0 (`LICENSE`), Radiance Innovation Centers in the Philippines. Radiance POS V3
-itself is under the same licence.
