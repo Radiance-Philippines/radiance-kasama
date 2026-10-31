@@ -27,6 +27,7 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Snooze
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -217,7 +218,11 @@ private fun Main(icon: ImageVector, text: String, onClick: () -> Unit) =
 
 @Composable
 private fun Second(icon: ImageVector, text: String, onClick: () -> Unit) =
-    FilledTonalButton(onClick = onClick, modifier = Modifier.fillMaxWidth().height(48.dp)) { Labeled(icon, text) }
+    FilledTonalButton(
+        onClick = onClick,
+        colors = ButtonDefaults.filledTonalButtonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurface),
+        modifier = Modifier.fillMaxWidth().height(48.dp),
+    ) { Labeled(icon, text) }
 
 @Composable
 private fun Quiet(icon: ImageVector, text: String, onClick: () -> Unit) =

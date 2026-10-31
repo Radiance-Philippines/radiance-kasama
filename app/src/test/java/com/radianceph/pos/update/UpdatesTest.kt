@@ -5,7 +5,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+/** Under Robolectric for Android's org.json (a release's answer reads with it) */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
 class UpdatesTest {
     @Test fun versionsCompareAsNumbers() {
         assertTrue(Updates.newer("0.1.10", "0.1.9"))
