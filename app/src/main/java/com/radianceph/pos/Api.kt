@@ -101,6 +101,15 @@ class Api(private val link: Link) {
     fun me(): JSONObject = call("GET", "api/v1/me")
     fun scan(code: String, to: String): JSONObject = call("POST", "api/v1/scan", JSONObject().put("code", code).put("to", to))
     fun item(code: String): JSONObject = call("GET", "api/v1/item?code=" + Uri.encode(code))
+    fun clock(): JSONObject = call("GET", "api/v1/clock")
+    fun punch(qr: String, fix: Fix): JSONObject = call(
+        "POST", "api/v1/punch",
+        JSONObject().put("qr", qr).put("lat", fix.lat).put("lng", fix.lng).put("accuracy", fix.accuracy).put("age", fix.age).put("mock", fix.mock),
+    )
+    fun clockSpot(locationId: Int, fix: Fix): JSONObject = call(
+        "POST", "api/v1/clock_spot",
+        JSONObject().put("location_id", locationId).put("lat", fix.lat).put("lng", fix.lng).put("accuracy", fix.accuracy).put("mock", fix.mock),
+    )
     fun count(locationId: Int, lines: List<Pair<Int, Double>>, note: String): JSONObject = call(
         "POST", "api/v1/count",
         JSONObject().put("location_id", locationId).put("note", note).put("lines", JSONArray(lines.map { JSONObject().put("item_id", it.first).put("counted", it.second) })),

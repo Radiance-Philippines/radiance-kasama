@@ -31,6 +31,10 @@ import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.MyLocation
+import androidx.compose.material.icons.automirrored.rounded.Login
+import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.Sell
 import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material3.AlertDialog
@@ -72,13 +76,19 @@ import com.radianceph.pos.Link
 import com.radianceph.pos.Links
 import com.radianceph.pos.Words
 import com.radianceph.pos.Words.t
+import com.radianceph.pos.Where
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.IOException
 
-internal enum class Page { HOME, SCAN_PC, PRICE, COUNT, PHONE }
+internal enum class Page { HOME, SCAN_PC, PRICE, COUNT, CLOCK, PHONE }
 
 /** What a refusal or a dropped connection says to the person */
 private fun said(e: Throwable): String = when (e) {
@@ -122,6 +132,7 @@ fun App() {
             Page.SCAN_PC -> ScanToPc(api, me, onBack = { page = Page.HOME })
             Page.PRICE -> PriceCheck(api, onBack = { page = Page.HOME })
             Page.COUNT -> CountStock(api, me, onBack = { page = Page.HOME })
+            Page.CLOCK -> TimeClock(api, onBack = { page = Page.HOME })
             Page.PHONE -> ThisPhone(current, onBack = { page = Page.HOME }, onForget = { Links.forget(context); link = null })
         }
     }
@@ -230,6 +241,9 @@ internal fun Home(link: Link, me: JSONObject?, error: String?, onRetry: () -> Un
         }
         if (can?.optBoolean("count") == true) {
             Tile(Icons.Rounded.Inventory2, t("count"), t("count_help")) { onOpen(Page.COUNT) }
+        }
+        if (me != null) {
+            Tile(Icons.Rounded.Schedule, t("clock"), if (link.attested.isNotEmpty()) t("clock_help") else t("clock_not_proven")) { onOpen(Page.CLOCK) }
         }
         Tile(Icons.Rounded.Smartphone, t("settings"), if (link.attested.isNotEmpty()) t("proven") else t("scan_only")) { onOpen(Page.PHONE) }
     }
@@ -430,6 +444,93 @@ private fun CountStock(api: Api, me: JSONObject?, onBack: () -> Unit) {
             },
             dismissButton = { TextButton(onClick = { asking = false }) { Labeled(Icons.Rounded.Close, t("cancel")) } },
         )
+    }
+}
+
+// ---- the time clock (radiance-pos#173) ----
+
+@Composable
+private fun TimeClock(api: Api, onBack: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
+    var state by remember { mutableStateOf<JSONObject?>(null) }
+    var message by remember { mutableStateOf<String?>(null) }
+    var scanning by remember { mutableStateOf(false) }
+    var busy by remember { mutableStateOf<String?>(null) }
+    val allowed = { ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED }
+    var permitted by remember { mutableStateOf(allowed()) }
+    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permitted = allowed(); if (!permitted) message = t("location_denied") }
+    val load = {
+        scope.launch {
+            runCatching { withContext(Dispatchers.IO) { api.clock() } }.onSuccess { state = it }.onFailure { message = said(it) }
+        }
+    }
+    LaunchedEffect(Unit) { load(); if (!permitted) ask.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        Header(t("clock"), onBack)
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            val s = state
+            if (s == null) {
+                Row(verticalAlignment = Alignment.CenterVertically) { CircularProgressIndicator(Modifier.size(22.dp)); Spacer(Modifier.width(12.dp)); Text(t("loading_clock")) }
+            } else if (!s.optBoolean("proven")) {
+                Text(t("clock_not_proven"), color = MaterialTheme.colorScheme.error)
+            } else if (scanning) {
+                Scanner(Codes.QR, paused = busy != null, modifier = Modifier.fillMaxWidth().height(320.dp), onFound = { qr ->
+                    if (!qr.startsWith("rposclock:")) return@Scanner
+                    busy = t("finding")
+                    scope.launch {
+                        val fix = Where.fix(context)
+                        if (fix == null) {
+                            message = t("location_off")
+                        } else {
+                            runCatching { withContext(Dispatchers.IO) { api.punch(qr, fix) } }
+                                .onSuccess { r -> message = r.optString("message"); haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
+                                .onFailure { message = said(it) }
+                        }
+                        busy = null
+                        scanning = false
+                        load()
+                    }
+                })
+                Text(t("scan_clock"), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedButton(onClick = { scanning = false }, modifier = Modifier.fillMaxWidth()) { Labeled(Icons.Rounded.Close, t("cancel")) }
+            } else {
+                val next = s.optString("next", "in")
+                Button(
+                    onClick = { message = null; if (permitted) scanning = true else ask.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) },
+                    modifier = Modifier.fillMaxWidth().height(64.dp),
+                ) { Labeled(if (next == "in") Icons.AutoMirrored.Rounded.Login else Icons.AutoMirrored.Rounded.Logout, t(if (next == "in") "time_in" else "time_out")) }
+            }
+            busy?.let { Row(verticalAlignment = Alignment.CenterVertically) { CircularProgressIndicator(Modifier.size(22.dp)); Spacer(Modifier.width(12.dp)); Text(it) } }
+            message?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
+            val today = s?.optJSONArray("today")
+            if (today != null && today.length() > 0) {
+                Text(t("today"), fontWeight = FontWeight.SemiBold)
+                for (i in 0 until today.length()) {
+                    val p = today.getJSONObject(i)
+                    Text(t(if (p.optString("kind") == "in") "time_in" else "time_out") + " · " + p.optString("time") + " · " + p.optString("branch"))
+                }
+            }
+            if (s?.optBoolean("can_set_spot") == true && !scanning) {
+                Spacer(Modifier.height(8.dp))
+                Text(t("set_spot_help"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+                val branches = s.optJSONArray("branches")
+                for (i in 0 until (branches?.length() ?: 0)) {
+                    val b = branches!!.getJSONObject(i)
+                    OutlinedButton(enabled = busy == null, onClick = {
+                        busy = t("finding")
+                        scope.launch {
+                            val fix = if (permitted) Where.fix(context) else null
+                            if (fix == null) message = t("location_off") else runCatching { withContext(Dispatchers.IO) { api.clockSpot(b.getInt("location_id"), fix) } }
+                                .onSuccess { message = t("spot_saved", b.optString("name")) }.onFailure { message = said(it) }
+                            busy = null
+                            load()
+                        }
+                    }, modifier = Modifier.fillMaxWidth()) { Labeled(Icons.Rounded.MyLocation, t("set_spot") + " · " + b.optString("name")) }
+                }
+            }
+        }
     }
 }
 
