@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The github flavor (the download page's build) updates itself (radiance-pos-android#1).
+     The play flavor doesn't: Google Play forbids self-updating apps, and this permission is
+     restricted there. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <application>
+        <!-- Android's answer about installing an update (asks the person, done, or why not) -->
+        <receiver
+            android:name=".update.Updates$Installed"
+            android:exported="false" />
+
+        <!-- the new version is on after "Restart to update": a quiet notification opens it again -->
+        <receiver
+            android:name=".update.Updates$Updated"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

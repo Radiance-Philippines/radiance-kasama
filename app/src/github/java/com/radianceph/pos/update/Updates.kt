@@ -43,6 +43,8 @@ import java.util.concurrent.TimeUnit
  * release's own file (SHA-256 from GitHub), this app, newer and signed with the same key, then
  * put on by Android on "Restart to update" (pressed by the person, never by itself).
  *
+ * Only in the github flavor (the download page's build): Google Play forbids self-updating apps.
+ *
  * The pop-up (owner, 2026-10-31: every app opens one when an update is out, with "Remind me
  * later"): "Remind me later" hides it for a day, "Skip this version" until the next one.
  */
