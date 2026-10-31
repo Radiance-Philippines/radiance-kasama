@@ -21,14 +21,21 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         Links.get(this)?.let { Words.use(it.language) }
         Alerts.channel(this)
+        AppUpdates.atStart(this) // a newer version out? (the github flavor updates itself; Play updates the play one)
         if (savedInstanceState == null) openAlert(intent)
         setContent {
             PosTheme {
                 Surface(Modifier.fillMaxSize().safeDrawingPadding(), color = MaterialTheme.colorScheme.background) {
                     App()
+                    AppUpdates.Prompt() // the update pop-up, when there's one
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        AppUpdates.resumed(this) // back from allowing installs, or a look when it's due
     }
 
     override fun onNewIntent(intent: Intent) {

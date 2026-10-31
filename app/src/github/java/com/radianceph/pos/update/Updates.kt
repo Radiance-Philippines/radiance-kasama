@@ -16,6 +16,7 @@ import android.os.Build
 import android.provider.Settings
 import android.util.Log
 import androidx.core.content.IntentCompat
+import com.radianceph.pos.R
 import com.radianceph.pos.Words.t
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -337,7 +338,7 @@ object Updates {
             val open = context.packageManager.getLaunchIntentForPackage(context.packageName) ?: return
             val pi = PendingIntent.getActivity(context, 0, open, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             val n = Notification.Builder(context, CHANNEL)
-                .setSmallIcon(android.R.drawable.stat_sys_download_done)
+                .setSmallIcon(R.drawable.ic_notify)
                 .setContentTitle(t("upd_ready_title", current(context)))
                 .setContentText(t("upd_notify_text"))
                 .setContentIntent(pi)
