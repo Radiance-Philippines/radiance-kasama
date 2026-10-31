@@ -110,6 +110,8 @@ class Api(private val link: Link) {
         "POST", "api/v1/clock_spot",
         JSONObject().put("location_id", locationId).put("lat", fix.lat).put("lng", fix.lng).put("accuracy", fix.accuracy).put("mock", fix.mock),
     )
+    /** This phone's Firebase token for the shop's alerts ("" stops them); test: the shop sends this phone a test alert */
+    fun push(token: String, test: Boolean = false): JSONObject = call("POST", "api/v1/push", JSONObject().put("token", token).apply { if (test) put("test", true) })
     fun count(locationId: Int, lines: List<Pair<Int, Double>>, note: String): JSONObject = call(
         "POST", "api/v1/count",
         JSONObject().put("location_id", locationId).put("note", note).put("lines", JSONArray(lines.map { JSONObject().put("item_id", it.first).put("counted", it.second) })),

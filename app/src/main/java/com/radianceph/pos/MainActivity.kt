@@ -1,5 +1,7 @@
 package com.radianceph.pos
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -17,6 +19,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        Links.get(this)?.let { Words.use(it.language) }
+        Alerts.channel(this)
+        if (savedInstanceState == null) openAlert(intent)
         setContent {
             PosTheme {
                 Surface(Modifier.fillMaxSize().safeDrawingPadding(), color = MaterialTheme.colorScheme.background) {
@@ -24,5 +29,17 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        openAlert(intent)
+    }
+
+    /** An alert tapped (radiance-pos#175): the shop's page it is about, in the browser; the app stays as it was */
+    private fun openAlert(intent: Intent?) {
+        val page = Alerts.page(this, intent) ?: return
+        intent?.removeExtra(Alerts.URL)
+        runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(page))) }
     }
 }

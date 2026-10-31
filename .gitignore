@@ -7,3 +7,5 @@ local.properties
 signing.properties
 .idea/
 *.iml
+# the owner's Firebase project (radiance-pos#175): copied in from the build server's keys folder at build time
+google-services.json

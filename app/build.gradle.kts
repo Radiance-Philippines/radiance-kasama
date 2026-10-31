@@ -3,6 +3,7 @@ import java.util.Properties
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -14,8 +15,8 @@ android {
         applicationId = "com.radianceph.pos"
         minSdk = 29 // Android 10: key attestation with an app id, CameraX, ML Kit
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
         // the phones the shops use: 64-bit and 32-bit Arm (ML Kit's reader is native code)
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
@@ -34,6 +35,14 @@ android {
                 keyPassword = signing.getProperty("keyPassword")
             }
         }
+    }
+    // Where the app comes from (owner, 2026-10-31): the download page (github: updates itself from GitHub Releases,
+    // radiance-pos-android#1) or Google Play (play: Play updates it; Play forbids an app updating itself and the
+    // install-packages permission), both the same package and the same signer
+    flavorDimensions += "store"
+    productFlavors {
+        create("github") { dimension = "store" }
+        create("play") { dimension = "store" }
     }
     buildTypes {
         // a test build beside the real app (its own name): it can only link to the demo and the test shop
@@ -78,6 +87,9 @@ dependencies {
     implementation("androidx.camera:camera-view:1.6.2")
     // barcodes and QR codes read on the phone, offline: ML Kit's bundled model (no Google Play download)
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
+    // the shop's alerts on the phone (radiance-pos#175): Firebase Cloud Messaging only, no analytics
+    implementation(platform("com.google.firebase:firebase-bom:35.1.0"))
+    implementation("com.google.firebase:firebase-messaging")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.17") // the screens drawn on the build server, to look at
     testImplementation("androidx.compose.ui:ui-test-junit4")

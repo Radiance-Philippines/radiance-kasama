@@ -38,7 +38,8 @@ class ScreensTest {
         Words.use(if (tl) "tl-PH" else "en-US")
         rule.setContent { PosTheme { Surface(color = MaterialTheme.colorScheme.background) { content() } } }
         rule.waitForIdle()
-        val dir = File("/srv/build/android-pos/screens")
+        // SCREENS_DIR: another build user's own folder (the default one is root's on ribs02)
+        val dir = File(System.getenv("SCREENS_DIR") ?: "/srv/build/android-pos/screens")
         if (!dir.isDirectory && !dir.mkdirs()) return
         val bmp: Bitmap = rule.onRoot().captureToImage().asAndroidBitmap()
         File(dir, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }

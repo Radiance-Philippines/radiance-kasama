@@ -26,6 +26,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.LinkOff
+import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.PointOfSale
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.Refresh
@@ -69,6 +70,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.radianceph.pos.Alerts
 import com.radianceph.pos.Api
 import com.radianceph.pos.ApiError
 import com.radianceph.pos.Keys
@@ -125,7 +127,16 @@ fun App() {
                 }
         }
     }
-    LaunchedEffect(current) { load() }
+    // the shop's alerts (radiance-pos#175): Android 13+ asks once; the token goes to the shop either way (alerts show
+    // once allowed)
+    val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    LaunchedEffect(current) {
+        load()
+        Alerts.register(context)
+        if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (page) {
             Page.HOME -> Home(current, me, error, onRetry = { load() }, onOpen = { page = it })
@@ -543,6 +554,23 @@ internal fun ThisPhone(link: Link, onBack: () -> Unit, onForget: () -> Unit) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(t("linked_to", link.shopName, link.person))
             Text(if (link.attested.isNotEmpty()) t("proven") else t("scan_only"), fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(12.dp))
+            // the shop's alerts (radiance-pos#175): on or off here, and a test through the shop and its sender
+            val context = LocalContext.current
+            val allowed = remember { Alerts.allowed(context) }
+            var test by remember { mutableStateOf<String?>(null) }
+            var sending by remember { mutableStateOf(false) }
+            Spacer(Modifier.height(4.dp))
+            Text(t("alerts"), fontWeight = FontWeight.SemiBold)
+            Text(if (allowed) t("alerts_on") else t("alerts_off"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+            if (allowed) {
+                OutlinedButton(enabled = !sending, onClick = {
+                    sending = true
+                    test = null
+                    Alerts.test(context) { r -> sending = false; test = if (r.getOrNull() == true) t("alert_test_sent") else r.exceptionOrNull()?.let { said(it) } ?: t("alert_test_none") }
+                }, modifier = Modifier.fillMaxWidth()) { Labeled(Icons.Rounded.NotificationsActive, t("alert_test")) }
+                test?.let { Text(it, fontSize = 14.sp) }
+            }
             Spacer(Modifier.height(12.dp))
             OutlinedButton(onClick = onForget, modifier = Modifier.fillMaxWidth()) { Labeled(Icons.Rounded.LinkOff, t("unlink_here")) }
             Text(t("unlink_here_help"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
