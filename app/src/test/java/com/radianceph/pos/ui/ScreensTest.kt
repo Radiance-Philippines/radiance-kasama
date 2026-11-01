@@ -48,6 +48,8 @@ class ScreensTest {
     @Test fun link() = shot("link-en", tl = false) { LinkScreen(onLinked = {}) }
     @Test fun homeCashier() = shot("home-cashier-tl", tl = true) { Home(link, me(scan = true, receiving = false, price = true, count = false), null, onRetry = {}, onOpen = {}) }
     @Test fun homeManager() = shot("home-manager-en", tl = false) { Home(link.copy(language = "en-US"), me(scan = true, receiving = true, price = true, count = true), null, onRetry = {}, onOpen = {}) }
+    @Test fun homeWaiting() = shot("home-waiting-tl", tl = true) { Home(link, null, null, onRetry = {}, onOpen = {}, waiting = "Hinihintay pa ng phone na ito ang approval ng may-ari o admin. Kapag na-approve na, i-tap ang Tingnan ulit.") }
+    @Test fun homeWaitingEn() = shot("home-waiting-en", tl = false) { Home(link.copy(language = "en-US"), null, null, onRetry = {}, onOpen = {}, waiting = "") }
     @Test fun homeOffline() = shot("home-offline-en", tl = false) { Home(link.copy(language = "en-US"), null, "No connection to the shop. Check the internet and try again.", onRetry = {}, onOpen = {}) }
     @Test fun price() = shot("price-tl", tl = true) {
         PriceResult(JSONObject("""{"item_id":1,"name":"Paracetamol 500mg (Biogesic)","barcode":"4800016644115","price":2.5,"price_text":"₱2.50","stock":[{"location_id":1,"name":"Lipa","quantity":40,"text":"40"},{"location_id":2,"name":"Tanauan","quantity":12,"text":"12"}],"counted":true}"""))

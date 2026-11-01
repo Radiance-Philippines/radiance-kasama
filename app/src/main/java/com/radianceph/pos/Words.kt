@@ -14,11 +14,15 @@ object Words {
 
     private val en = mapOf(
         "link_title" to "Link this phone",
-        "link_lead" to "Ask the owner to open Office > Phones on the POS and tap Link a phone beside your name. Then scan the QR on that screen.",
-        "link_scan" to "Scan the owner's QR",
+        "link_lead" to "On the POS, open your Profile (your name at the top) > My phone > Link my phone. Then scan the QR on that screen.",
+        "link_scan" to "Scan the QR",
         "link_working" to "Linking…",
         "linked_proven" to "Linked. This phone proved it's yours and untouched: it can clock you in and out.",
         "linked_scan_only" to "Linked for scanning. This phone couldn't prove itself (%s), so it can't clock you in.",
+        "linked_waiting" to "Linked. It's waiting for an owner or admin to approve it on the POS (Office > Phones). Then it works.",
+        "waiting_title" to "Waiting for the owner's approval",
+        "waiting_help" to "An owner or admin approves this phone in Office > Phones. Then tap Check again.",
+        "check_again" to "Check again",
         "not_a_link" to "That isn't a link QR from a Radiance POS shop.",
         // updates (radiance-pos-android#1)
         "upd_out_title" to "Radiance POS %s is out",
@@ -114,11 +118,15 @@ object Words {
 
     private val taglish = mapOf(
         "link_title" to "I-link ang phone na ito",
-        "link_lead" to "Pabuksan sa may-ari ang Opisina > Mga phone sa POS at i-tap ang I-link ang phone katabi ng pangalan mo. Saka i-scan ang QR sa screen na iyon.",
-        "link_scan" to "I-scan ang QR ng may-ari",
+        "link_lead" to "Sa POS, buksan ang Profile mo (ang pangalan mo sa itaas) > Ang phone ko > I-link ang phone ko. Saka i-scan ang QR sa screen na iyon.",
+        "link_scan" to "I-scan ang QR",
         "link_working" to "Nagli-link…",
         "linked_proven" to "Na-link. Napatunayan ng phone na ito na sa iyo ito at walang binago: makakapag-time in at out ka rito.",
         "linked_scan_only" to "Na-link para sa pag-scan. Hindi napatunayan ng phone na ito ang sarili (%s), kaya hindi ka makakapag-time in dito.",
+        "linked_waiting" to "Na-link. Hinihintay nito ang approval ng may-ari o admin sa POS (Opisina > Mga phone). Saka ito gagana.",
+        "waiting_title" to "Hinihintay ang approval ng may-ari",
+        "waiting_help" to "Ina-approve ng may-ari o admin ang phone na ito sa Opisina > Mga phone. Saka i-tap ang Tingnan ulit.",
+        "check_again" to "Tingnan ulit",
         "not_a_link" to "Hindi ito QR para mag-link mula sa isang Radiance POS na shop.",
         // updates (radiance-pos-android#1)
         "upd_out_title" to "Labas na ang Radiance POS %s",

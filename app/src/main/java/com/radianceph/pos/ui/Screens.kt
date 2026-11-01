@@ -24,6 +24,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.HourglassTop
 import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.LinkOff
 import androidx.compose.material.icons.rounded.NotificationsActive
@@ -113,16 +114,26 @@ fun App() {
     val api = remember(current) { Api(current) }
     var me by remember(current) { mutableStateOf<JSONObject?>(null) }
     var error by remember(current) { mutableStateOf<String?>(null) }
+    // waiting for an owner's or admin's approval (radiance-pos#194): the shop's own words, until it answers
+    var waiting by remember(current) { mutableStateOf<String?>(null) }
     var page by remember { mutableStateOf(Page.HOME) }
     val scope = rememberCoroutineScope()
     val load = {
         error = null
         scope.launch {
             runCatching { withContext(Dispatchers.IO) { api.me() } }
-                .onSuccess { me = it }
+                .onSuccess {
+                    me = it
+                    // approved since: its alerts can be turned on now
+                    if (waiting != null) { waiting = null; Alerts.register(context) }
+                }
                 .onFailure {
+                    if (it is ApiError && it.error == "phone_waiting") {
+                        waiting = it.message
+                        return@onFailure
+                    }
                     error = said(it)
-                    // unlinked by the owner: back to linking
+                    // unlinked (or turned down): back to linking
                     if (it is ApiError && it.error == "unlinked") { Links.forget(context); link = null }
                 }
         }
@@ -139,7 +150,7 @@ fun App() {
     }
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (page) {
-            Page.HOME -> Home(current, me, error, onRetry = { load() }, onOpen = { page = it })
+            Page.HOME -> Home(current, me, error, onRetry = { load() }, onOpen = { page = it }, waiting = waiting)
             Page.SCAN_PC -> ScanToPc(api, me, onBack = { page = Page.HOME })
             Page.PRICE -> PriceCheck(api, onBack = { page = Page.HOME })
             Page.COUNT -> CountStock(api, me, onBack = { page = Page.HOME })
@@ -217,7 +228,11 @@ fun LinkScreen(onLinked: (Link) -> Unit) {
                         val l = Link(base, shop, r.getInt("phone_id"), person.optString("name"), shopInfo.optString("name"), r.optString("attested"), shopInfo.optString("language", "en-US"))
                         Links.save(context, l)
                         Words.use(l.language)
-                        done = l to (if (l.attested.isNotEmpty()) t("linked_proven") else t("linked_scan_only", r.optString("attestation")))
+                        done = l to when {
+                            r.optBoolean("waiting") -> t("linked_waiting")
+                            l.attested.isNotEmpty() -> t("linked_proven")
+                            else -> t("linked_scan_only", r.optString("attestation"))
+                        }
                     }.onFailure { error = said(it) }
                     working = false
                 }
@@ -232,15 +247,29 @@ fun LinkScreen(onLinked: (Link) -> Unit) {
 // ---- Home ----
 
 @Composable
-internal fun Home(link: Link, me: JSONObject?, error: String?, onRetry: () -> Unit, onOpen: (Page) -> Unit) {
+internal fun Home(link: Link, me: JSONObject?, error: String?, onRetry: () -> Unit, onOpen: (Page) -> Unit, waiting: String? = null) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text(t("hi", me?.optJSONObject("person")?.optString("first_name")?.ifEmpty { null } ?: link.person), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text(me?.optJSONObject("shop")?.optString("name") ?: link.shopName, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (waiting != null) {
+            // linked, not approved yet (radiance-pos#194): nothing works until an owner or admin approves it
+            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), contentColor = MaterialTheme.colorScheme.onBackground)) {
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.HourglassTop, contentDescription = null, modifier = Modifier.size(24.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text(t("waiting_title"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    }
+                    Text(waiting.ifEmpty { t("waiting_help") })
+                    Button(onClick = onRetry, modifier = Modifier.fillMaxWidth().height(52.dp)) { Labeled(Icons.Rounded.Refresh, t("check_again")) }
+                }
+            }
+        }
         if (error != null) {
             Text(error, color = MaterialTheme.colorScheme.error)
             OutlinedButton(onClick = onRetry) { Labeled(Icons.Rounded.Refresh, t("retry")) }
         }
-        if (me == null && error == null) {
+        if (me == null && error == null && waiting == null) {
             Row(verticalAlignment = Alignment.CenterVertically) { CircularProgressIndicator(Modifier.size(22.dp)); Spacer(Modifier.width(12.dp)); Text(t("loading")) }
         }
         val can = me?.optJSONObject("can")
