@@ -82,6 +82,7 @@ import com.radianceph.pos.Words.t
 import com.radianceph.pos.Where
 import android.Manifest
 import android.content.pm.PackageManager
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -92,6 +93,15 @@ import org.json.JSONObject
 import java.io.IOException
 
 internal enum class Page { HOME, SCAN_PC, PRICE, COUNT, CLOCK, PHONE }
+
+/**
+ * Android's Back on a page goes to Home, never out of the app (owner, 2026-11-01: "pag clinick ko yung back sa nav nag
+ * eexit yung buong app"); on Home it leaves the app as Back always does
+ */
+@Composable
+internal fun BackToHome(page: Page, onHome: () -> Unit) {
+    BackHandler(enabled = page != Page.HOME) { onHome() }
+}
 
 /** What a refusal or a dropped connection says to the person */
 private fun said(e: Throwable): String = when (e) {
@@ -148,6 +158,7 @@ fun App() {
             notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
+    BackToHome(page) { page = Page.HOME }
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (page) {
             Page.HOME -> Home(current, me, error, onRetry = { load() }, onOpen = { page = it }, waiting = waiting)
@@ -188,6 +199,7 @@ fun LinkScreen(onLinked: (Link) -> Unit) {
     val scope = rememberCoroutineScope()
     var scanning by remember { mutableStateOf(false) }
     var working by remember { mutableStateOf(false) }
+    BackHandler(enabled = scanning) { scanning = false } // Back closes the camera, not the app
     var error by remember { mutableStateOf<String?>(null) }
     var done by remember { mutableStateOf<Pair<Link, String>?>(null) }
     Words.use(java.util.Locale.getDefault().language.let { if (it == "tl" || it == "fil") "tl-PH" else "en-US" })
@@ -498,6 +510,7 @@ private fun TimeClock(api: Api, onBack: () -> Unit) {
     var message by remember { mutableStateOf<String?>(null) }
     var scanning by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf<String?>(null) }
+    BackHandler(enabled = scanning) { scanning = false } // Back closes the camera, not the page
     val allowed = { ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED }
     var permitted by remember { mutableStateOf(allowed()) }
     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permitted = allowed(); if (!permitted) message = t("location_denied") }
