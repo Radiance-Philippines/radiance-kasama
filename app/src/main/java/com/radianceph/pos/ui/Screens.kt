@@ -513,13 +513,14 @@ private fun TimeClock(api: Api, onBack: () -> Unit) {
     BackHandler(enabled = scanning) { scanning = false } // Back closes the camera, not the page
     val allowed = { ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED }
     var permitted by remember { mutableStateOf(allowed()) }
-    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permitted = allowed(); if (!permitted) message = t("location_denied") }
+    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permitted = allowed() }
     val load = {
         scope.launch {
             runCatching { withContext(Dispatchers.IO) { api.clock() } }.onSuccess { state = it }.onFailure { message = said(it) }
         }
     }
-    LaunchedEffect(Unit) { load(); if (!permitted) ask.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) }
+    // location helps but never blocks: without it the shop's Wi-Fi may prove the time in (radiance-pos#203)
+    LaunchedEffect(Unit) { load() }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Header(t("clock"), onBack)
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -533,14 +534,12 @@ private fun TimeClock(api: Api, onBack: () -> Unit) {
                     if (!qr.startsWith("rposclock:")) return@Scanner
                     busy = t("finding")
                     scope.launch {
-                        val fix = Where.fix(context)
-                        if (fix == null) {
-                            message = t("location_off")
-                        } else {
-                            runCatching { withContext(Dispatchers.IO) { api.punch(qr, fix) } }
-                                .onSuccess { r -> message = r.optString("message"); haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
-                                .onFailure { message = said(it) }
-                        }
+                        // the location when the phone has one (a short wait); without it the scan still goes: the
+                        // shop answers, and its words say what to do (radiance-pos#203)
+                        val fix = if (allowed()) Where.fix(context, timeoutMs = 10000) else null
+                        runCatching { withContext(Dispatchers.IO) { api.punch(qr, fix) } }
+                            .onSuccess { r -> message = r.optString("message"); haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
+                            .onFailure { message = said(it) }
                         busy = null
                         scanning = false
                         load()
@@ -551,9 +550,16 @@ private fun TimeClock(api: Api, onBack: () -> Unit) {
             } else {
                 val next = s.optString("next", "in")
                 Button(
-                    onClick = { message = null; if (permitted) scanning = true else ask.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) },
+                    onClick = { message = null; scanning = true },
                     modifier = Modifier.fillMaxWidth().height(64.dp),
                 ) { Labeled(if (next == "in") Icons.AutoMirrored.Rounded.Login else Icons.AutoMirrored.Rounded.Logout, t(if (next == "in") "time_in" else "time_out")) }
+                // no location allowed: a suggestion, never a blocker (the shop's Wi-Fi may prove it, radiance-pos#203)
+                if (!permitted) {
+                    Text(t("location_suggest"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+                    OutlinedButton(onClick = { ask.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) }, modifier = Modifier.fillMaxWidth()) {
+                        Labeled(Icons.Rounded.MyLocation, t("allow_location"))
+                    }
+                }
             }
             busy?.let { Row(verticalAlignment = Alignment.CenterVertically) { CircularProgressIndicator(Modifier.size(22.dp)); Spacer(Modifier.width(12.dp)); Text(it) } }
             message?.let { Text(it, style = MaterialTheme.typography.titleMedium) }

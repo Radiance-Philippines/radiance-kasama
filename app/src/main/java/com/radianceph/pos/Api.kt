@@ -102,10 +102,8 @@ class Api(private val link: Link) {
     fun scan(code: String, to: String): JSONObject = call("POST", "api/v1/scan", JSONObject().put("code", code).put("to", to))
     fun item(code: String): JSONObject = call("GET", "api/v1/item?code=" + Uri.encode(code))
     fun clock(): JSONObject = call("GET", "api/v1/clock")
-    fun punch(qr: String, fix: Fix): JSONObject = call(
-        "POST", "api/v1/punch",
-        JSONObject().put("qr", qr).put("lat", fix.lat).put("lng", fix.lng).put("accuracy", fix.accuracy).put("age", fix.age).put("mock", fix.mock),
-    )
+    /** A time in or out: the QR, and the phone's location when it has one (none: the shop's Wi-Fi may prove it, radiance-pos#203) */
+    fun punch(qr: String, fix: Fix?): JSONObject = call("POST", "api/v1/punch", punchBody(qr, fix))
     fun clockSpot(locationId: Int, fix: Fix): JSONObject = call(
         "POST", "api/v1/clock_spot",
         JSONObject().put("location_id", locationId).put("lat", fix.lat).put("lng", fix.lng).put("accuracy", fix.accuracy).put("mock", fix.mock),
@@ -143,4 +141,11 @@ class Api(private val link: Link) {
             return json2
         }
     }
+}
+
+/** What a punch sends: the QR, and the location only when the phone has one (radiance-pos#203) */
+internal fun punchBody(qr: String, fix: Fix?): JSONObject {
+    val body = JSONObject().put("qr", qr).put("mock", fix?.mock ?: false)
+    if (fix != null) body.put("lat", fix.lat).put("lng", fix.lng).put("accuracy", fix.accuracy).put("age", fix.age)
+    return body
 }
