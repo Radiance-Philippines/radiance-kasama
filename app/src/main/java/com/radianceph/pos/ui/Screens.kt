@@ -25,6 +25,7 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.HourglassTop
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.LinkOff
 import androidx.compose.material.icons.rounded.NotificationsActive
@@ -110,6 +111,20 @@ private fun said(e: Throwable): String = when (e) {
     else -> e.message ?: t("offline")
 }
 
+/**
+ * The shop's time clock is on (radiance-pos#210, Settings > Time clock): me's can.time_clock. A shop on an older release
+ * doesn't say: on, as before
+ */
+internal fun clockOn(me: JSONObject?): Boolean = me?.optJSONObject("can")?.optBoolean("time_clock", true) ?: true
+
+/** The shop turned its time clock off (radiance-pos#210, 409 clock_off): what it said; null for any other refusal */
+internal fun clockOffSaid(e: Throwable?): String? = if (e is ApiError && e.error == "clock_off") e.message.ifBlank { t("clock_off") } else null
+
+/** me with the time clock off, as the shop's 409 said, until its own me comes back */
+internal fun withClockOff(me: JSONObject?): JSONObject? = me?.let { old ->
+    JSONObject(old.toString()).apply { (optJSONObject("can") ?: JSONObject().also { put("can", it) }).put("time_clock", false) }
+}
+
 /** The app: link once, then Home and its pages */
 @Composable
 fun App() {
@@ -126,6 +141,8 @@ fun App() {
     var error by remember(current) { mutableStateOf<String?>(null) }
     // waiting for an owner's or admin's approval (radiance-pos#194): the shop's own words, until it answers
     var waiting by remember(current) { mutableStateOf<String?>(null) }
+    // the shop turned its time clock off while the person was on it (radiance-pos#210): its words, on Home
+    var notice by remember(current) { mutableStateOf<String?>(null) }
     var page by remember { mutableStateOf(Page.HOME) }
     val scope = rememberCoroutineScope()
     val load = {
@@ -161,11 +178,16 @@ fun App() {
     BackToHome(page) { page = Page.HOME }
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (page) {
-            Page.HOME -> Home(current, me, error, onRetry = { load() }, onOpen = { page = it }, waiting = waiting)
+            Page.HOME -> Home(current, me, error, onRetry = { load() }, onOpen = { notice = null; page = it }, waiting = waiting, notice = notice, onNotice = { notice = null })
             Page.SCAN_PC -> ScanToPc(api, me, onBack = { page = Page.HOME })
             Page.PRICE -> PriceCheck(api, onBack = { page = Page.HOME })
             Page.COUNT -> CountStock(api, me, onBack = { page = Page.HOME })
-            Page.CLOCK -> TimeClock(api, onBack = { page = Page.HOME })
+            // only while the shop has its time clock on (radiance-pos#210); turned off since: its words on Home, me again
+            Page.CLOCK -> if (clockOn(me)) {
+                TimeClock(api, onBack = { page = Page.HOME }, onOff = { text -> me = withClockOff(me); notice = text; page = Page.HOME; load() })
+            } else {
+                LaunchedEffect(Unit) { page = Page.HOME }
+            }
             Page.PHONE -> ThisPhone(current, onBack = { page = Page.HOME }, onForget = { Links.forget(context); link = null })
         }
     }
@@ -259,7 +281,7 @@ fun LinkScreen(onLinked: (Link) -> Unit) {
 // ---- Home ----
 
 @Composable
-internal fun Home(link: Link, me: JSONObject?, error: String?, onRetry: () -> Unit, onOpen: (Page) -> Unit, waiting: String? = null) {
+internal fun Home(link: Link, me: JSONObject?, error: String?, onRetry: () -> Unit, onOpen: (Page) -> Unit, waiting: String? = null, notice: String? = null, onNotice: () -> Unit = {}) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text(t("hi", me?.optJSONObject("person")?.optString("first_name")?.ifEmpty { null } ?: link.person), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text(me?.optJSONObject("shop")?.optString("name") ?: link.shopName, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -274,6 +296,19 @@ internal fun Home(link: Link, me: JSONObject?, error: String?, onRetry: () -> Un
                     }
                     Text(waiting.ifEmpty { t("waiting_help") })
                     Button(onClick = onRetry, modifier = Modifier.fillMaxWidth().height(52.dp)) { Labeled(Icons.Rounded.Refresh, t("check_again")) }
+                }
+            }
+        }
+        if (notice != null) {
+            // the time clock turned off while the person was on it (radiance-pos#210): the shop's words, plainly
+            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), contentColor = MaterialTheme.colorScheme.onBackground)) {
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.Info, contentDescription = null, modifier = Modifier.size(24.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text(notice, modifier = Modifier.weight(1f))
+                    }
+                    OutlinedButton(onClick = onNotice, modifier = Modifier.fillMaxWidth()) { Labeled(Icons.Rounded.CheckCircle, "OK") }
                 }
             }
         }
@@ -294,7 +329,8 @@ internal fun Home(link: Link, me: JSONObject?, error: String?, onRetry: () -> Un
         if (can?.optBoolean("count") == true) {
             Tile(Icons.Rounded.Inventory2, t("count"), t("count_help")) { onOpen(Page.COUNT) }
         }
-        if (me != null) {
+        // the shop's time clock off (radiance-pos#210): no Time clock here
+        if (me != null && clockOn(me)) {
             Tile(Icons.Rounded.Schedule, t("clock"), if (link.attested.isNotEmpty()) t("clock_help") else t("clock_not_proven")) { onOpen(Page.CLOCK) }
         }
         Tile(Icons.Rounded.Smartphone, t("settings"), if (link.attested.isNotEmpty()) t("proven") else t("scan_only")) { onOpen(Page.PHONE) }
@@ -502,7 +538,7 @@ private fun CountStock(api: Api, me: JSONObject?, onBack: () -> Unit) {
 // ---- the time clock (radiance-pos#173) ----
 
 @Composable
-private fun TimeClock(api: Api, onBack: () -> Unit) {
+private fun TimeClock(api: Api, onBack: () -> Unit, onOff: (String) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
@@ -514,9 +550,23 @@ private fun TimeClock(api: Api, onBack: () -> Unit) {
     val allowed = { ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED }
     var permitted by remember { mutableStateOf(allowed()) }
     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permitted = allowed() }
+    // the shop turned its time clock off (radiance-pos#210, 409 clock_off on clock, punch or clock_spot): its words go
+    // Home with the person, and the page asks no more
+    var leaving by remember { mutableStateOf(false) }
+    val refused: (Throwable) -> Unit = { e ->
+        val off = clockOffSaid(e)
+        if (off != null) {
+            leaving = true
+            onOff(off)
+        } else {
+            message = said(e)
+        }
+    }
     val load = {
-        scope.launch {
-            runCatching { withContext(Dispatchers.IO) { api.clock() } }.onSuccess { state = it }.onFailure { message = said(it) }
+        if (!leaving) {
+            scope.launch {
+                runCatching { withContext(Dispatchers.IO) { api.clock() } }.onSuccess { state = it }.onFailure(refused)
+            }
         }
     }
     // location helps but never blocks: without it the shop's Wi-Fi may prove the time in (radiance-pos#203)
@@ -539,7 +589,7 @@ private fun TimeClock(api: Api, onBack: () -> Unit) {
                         val fix = if (allowed()) Where.fix(context, timeoutMs = 10000) else null
                         runCatching { withContext(Dispatchers.IO) { api.punch(qr, fix) } }
                             .onSuccess { r -> message = r.optString("message"); haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
-                            .onFailure { message = said(it) }
+                            .onFailure(refused)
                         busy = null
                         scanning = false
                         load()
@@ -582,7 +632,7 @@ private fun TimeClock(api: Api, onBack: () -> Unit) {
                         scope.launch {
                             val fix = if (permitted) Where.fix(context) else null
                             if (fix == null) message = t("location_off") else runCatching { withContext(Dispatchers.IO) { api.clockSpot(b.getInt("location_id"), fix) } }
-                                .onSuccess { message = t("spot_saved", b.optString("name")) }.onFailure { message = said(it) }
+                                .onSuccess { message = t("spot_saved", b.optString("name")) }.onFailure(refused)
                             busy = null
                             load()
                         }
