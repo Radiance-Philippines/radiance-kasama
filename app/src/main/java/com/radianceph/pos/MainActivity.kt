@@ -14,7 +14,7 @@ import androidx.compose.ui.Modifier
 import com.radianceph.pos.ui.App
 import com.radianceph.pos.ui.PosTheme
 
-/** Radiance POS V3 for Android (radiance-pos#172): one screen at a time (ui/Screens.kt) */
+/** Radiance Kasama, the phone helper for Radiance POS V3 (radiance-pos#172): one screen at a time (ui/Screens.kt) */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

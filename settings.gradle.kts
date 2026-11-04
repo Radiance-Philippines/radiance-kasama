@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "RadiancePOS"
+rootProject.name = "RadianceKasama"
 include(":app")

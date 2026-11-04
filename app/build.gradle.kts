@@ -37,7 +37,7 @@ android {
         }
     }
     // Where the app comes from (owner, 2026-10-31): the download page (github: updates itself from GitHub Releases,
-    // radiance-pos-android#1) or Google Play (play: Play updates it; Play forbids an app updating itself and the
+    // radiance-kasama#1) or Google Play (play: Play updates it; Play forbids an app updating itself and the
     // install-packages permission), both the same package and the same signer
     flavorDimensions += "store"
     productFlavors {

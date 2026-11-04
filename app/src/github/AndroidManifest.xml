@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The github flavor (the download page's build) updates itself (radiance-pos-android#1).
+<!-- The github flavor (the download page's build) updates itself (radiance-kasama#1).
      The play flavor doesn't: Google Play forbids self-updating apps, and this permission is
      restricted there. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">

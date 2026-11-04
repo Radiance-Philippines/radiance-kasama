@@ -38,7 +38,7 @@ import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 
 /**
- * Updates over the air (radiance-pos-android#1; docs/android/DESIGN.md §8: "as Radiance Music"):
+ * Updates over the air (radiance-kasama#1; docs/android/DESIGN.md §8: "as Radiance Music"):
  * the newest GitHub release of this app, looked up at start and on coming back to the app (at
  * most every 6 hours); downloaded on "Update now" into the app's own cache, checked to be the
  * release's own file (SHA-256 from GitHub), this app, newer and signed with the same key, then
@@ -50,9 +50,9 @@ import java.util.concurrent.TimeUnit
  * later"): "Remind me later" hides it for a day, "Skip this version" until the next one.
  */
 object Updates {
-    private const val LATEST = "https://api.github.com/repos/Radiance-Philippines/radiance-pos-android/releases/latest"
+    private const val LATEST = "https://api.github.com/repos/Radiance-Philippines/radiance-kasama/releases/latest"
     /** The release's app file (others ending in .apk are taken if it isn't there). */
-    const val ASSET = "RadiancePOS.apk"
+    const val ASSET = "RadianceKasama.apk"
     private const val PREFS = "updates"
     private const val EVERY_MS = 6 * 60 * 60 * 1000L
     /** "Remind me later": a day (owner, 2026-10-31). */
@@ -72,7 +72,7 @@ object Updates {
         data class Ready(val release: Release, val note: String? = null) : State
         /** Android is putting it on, or asking the person to. */
         data class Installing(val release: Release) : State
-        /** Android needs a yes first: Install unknown apps, for Radiance POS. */
+        /** Android needs a yes first: Install unknown apps, for Radiance Kasama. */
         data class Allow(val release: Release) : State
         data class Failed(val message: String, val release: Release?) : State
     }
@@ -187,7 +187,7 @@ object Updates {
         }
     }
 
-    /** Android's page where Radiance POS may be allowed to install its updates. */
+    /** Android's page where Radiance Kasama may be allowed to install its updates. */
     fun allowIntent(context: Context) =
         Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
@@ -195,7 +195,7 @@ object Updates {
     fun metered(context: Context) = context.getSystemService(ConnectivityManager::class.java)?.isActiveNetworkMetered ?: false
 
     private fun latest(): Release {
-        val req = Request.Builder().url(LATEST).header("User-Agent", "RadiancePOS-Android").header("Accept", "application/vnd.github+json").build()
+        val req = Request.Builder().url(LATEST).header("User-Agent", "RadianceKasama-Android").header("Accept", "application/vnd.github+json").build()
         val body = http.newCall(req).execute().use { r ->
             check(r.isSuccessful) { "GitHub answered ${r.code}" }
             r.body.string()
@@ -227,7 +227,7 @@ object Updates {
         while (true) {
             val from = part.length()
             _state.value = State.Downloading(r, if (r.size > 0) from.toFloat() / r.size else 0f)
-            val req = Request.Builder().url(r.apk).header("User-Agent", "RadiancePOS-Android")
+            val req = Request.Builder().url(r.apk).header("User-Agent", "RadianceKasama-Android")
                 .apply { if (from > 0) header("Range", "bytes=$from-") }.build()
             val ok = runCatching {
                 http.newCall(req).execute().use resp@{ resp ->
@@ -352,13 +352,13 @@ object Updates {
     private const val NOTE_ID = 7_014
 
     /** Where [r]'s download is kept (whole and checked; a ".part" beside it while it downloads). */
-    private fun file(context: Context, r: Release) = File(File(context.cacheDir, "update"), "RadiancePOS-${r.version}.apk")
+    private fun file(context: Context, r: Release) = File(File(context.cacheDir, "update"), "RadianceKasama-${r.version}.apk")
 
     /** Downloads of versions that are on now (or older) aren't needed any more. */
     private fun clean(context: Context) {
         val now = current(context)
         File(context.cacheDir, "update").listFiles()?.forEach { f ->
-            val v = f.name.removePrefix("RadiancePOS-").removeSuffix(".part").removeSuffix(".apk")
+            val v = f.name.removePrefix("RadianceKasama-").removeSuffix(".part").removeSuffix(".apk")
             if (!newer(v, now)) f.delete()
         }
     }

@@ -7,7 +7,7 @@ import com.radianceph.pos.update.Updates
 
 /**
  * How this build updates (the github flavor, from the download page): by itself, from the
- * newest GitHub release, with the update pop-up (radiance-pos-android#1). The play flavor's
+ * newest GitHub release, with the update pop-up (radiance-kasama#1). The play flavor's
  * AppUpdates does nothing: Google Play updates it.
  */
 object AppUpdates {
