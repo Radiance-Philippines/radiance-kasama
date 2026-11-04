@@ -54,7 +54,7 @@ import com.radianceph.pos.Words.t
 import com.radianceph.pos.update.Updates
 
 /**
- * The update pop-up (radiance-pos-android#1; owner, 2026-10-31: every app opens a modal when an
+ * The update pop-up (radiance-kasama#1; owner, 2026-10-31: every app opens a modal when an
  * update is out, with "Remind me later"). It comes up by itself when a newer version is out, or
  * when one the person chose to download is ready: Update now (downloads) → Restart to update;
  * Remind me later (a day); Skip this version (until the next one).

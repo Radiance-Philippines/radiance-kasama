@@ -76,7 +76,7 @@ class ScreensTest {
     }
     @Test fun phone() = shot("phone-tl", tl = true) { ThisPhone(link, onBack = {}, onForget = {}) }
 
-    // ---- the shop's time clock on or off (radiance-pos#210, radiance-pos-android#4) ----
+    // ---- the shop's time clock on or off (radiance-pos#210, radiance-kasama#4) ----
 
     @Test fun clockOffHidesTheTimeClock() {
         shot("home-clock-off-en", tl = false) { Home(link.copy(language = "en-US"), me(scan = true, receiving = true, price = true, count = true, clock = false), null, onRetry = {}, onOpen = {}) }

@@ -1,7 +1,8 @@
-# Radiance POS V3 for Android
+# Radiance Kasama
 
-The phone side of Radiance POS V3 (Radiance-Philippines/radiance-pos#172; the design: radiance-pos
-`docs/android/DESIGN.md`). Each person's own phone, linked once by the shop's owner (Office > Phones):
+The phone helper for Radiance POS V3 (Radiance-Philippines/radiance-pos#172; the design: radiance-pos
+`docs/android/DESIGN.md`). It is not a POS: the shop sells on the PC, and Kasama works next to it. Each
+person's own phone, linked once by the shop's owner (Office > Phones):
 
 - **Scan for my PC:** each barcode goes into the sale (or receiving) open on the PC where they're signed in.
 - **Price check** and **Count stock** (Update stock's own change, the person's own permissions).

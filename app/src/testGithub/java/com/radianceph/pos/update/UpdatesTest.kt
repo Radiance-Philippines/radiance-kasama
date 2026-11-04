@@ -31,7 +31,7 @@ class UpdatesTest {
 
     @Test fun aReleaseReadsWithItsAppFileAndSha256() {
         val r = Updates.release(JSONObject("""{"tag_name":"v0.2.0","body":"- Updates","html_url":"https://github.com/x/y/releases/tag/v0.2.0",
-            "assets":[{"name":"notes.txt","size":1,"browser_download_url":"https://e/n"},{"name":"RadiancePOS.apk","size":9,"browser_download_url":"https://e/a.apk","digest":"sha256:ab"}]}"""))
+            "assets":[{"name":"notes.txt","size":1,"browser_download_url":"https://e/n"},{"name":"RadianceKasama.apk","size":9,"browser_download_url":"https://e/a.apk","digest":"sha256:ab"}]}"""))
         assertEquals(listOf("0.2.0", "https://e/a.apk", "ab"), listOf(r.version, r.apk, r.sha256))
         assertEquals(9L, r.size)
     }
